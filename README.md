@@ -7,11 +7,17 @@ code：ad49
 
 # Environment
 dgl == 0.4
+
 python == 3.7.12
+
 pytorch == 1.12.1+cu113
+
 numpy == 1.21.6
+
 networkx == 2.5.1
+
 scipy == 1.4.1
+
 scikit-learn == 0.22.1
 
 
