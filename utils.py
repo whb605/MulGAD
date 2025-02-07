@@ -1,10 +1,7 @@
-import copy
-
 import numpy as np
 import networkx as nx
 import scipy.sparse as sp
 from collections import Counter
-from collections import OrderedDict
 import torch
 import scipy.io as sio
 import random
@@ -79,9 +76,10 @@ def load_mat(dataset, train_rate=0.3, val_rate=0.1):
     adj = np.array(network.todense())
 
     matrix = np.identity(adj.shape[0], dtype=int)
-    adj = np.bitwise_or(adj, matrix)
+    adj = adj + matrix
     adj = sp.csr_matrix(adj)
     feat = sp.lil_matrix(attr)
+
     labels = np.zeros((adj.shape[0], 2))
 
     ano_labels = np.squeeze(np.array(label))
@@ -136,7 +134,7 @@ def generate_rwr_subgraph(adj_list, neighbor_list, subgraph_size, features, subg
             tmp_num = 0
             for idx in neighbor_idx:
                 curr_neighbor = neighbors[idx]
-                if curr_neighbor >= 0:
+                if curr_neighbor>=0:
                     tmpg.append(curr_neighbor)
                     tmpv.append(curr_view)
                     tmp_num = tmp_num + 1
@@ -152,15 +150,13 @@ def generate_rwr_subgraph(adj_list, neighbor_list, subgraph_size, features, subg
         tmp_adj = adj_list[:, subgraphs[i], :][:, :, subgraphs[i]]
         view_c = 0
         view_n = Counter(subviews[i])
-
         cur_feat = torch.zeros(subgraph_view_size, features.shape[1], dtype=torch.float).cuda()
         cur_adj = torch.zeros(subgraph_view_size, subgraph_view_size, dtype=torch.int).cuda()
         cur_adj[0, 0] = 1
         for value, count in view_n.items():
             cur_begin = torch.sum(subgraph_size[0:value]) + 1
             cur_feat[cur_begin:cur_begin + count, :] = features[subgraphs[i][view_c:view_c + count], :]
-            cur_adj[cur_begin:cur_begin + count, cur_begin:cur_begin + count] = tmp_adj[value, view_c:view_c + count,
-                                                                                view_c:view_c + count]
+            cur_adj[cur_begin:cur_begin + count, cur_begin:cur_begin + count] = tmp_adj[value, view_c:view_c + count, view_c:view_c + count]
             view_c = view_c + count
             cur_adj[0, cur_begin] = 1
             cur_adj[cur_begin, 0] = 1
@@ -168,6 +164,7 @@ def generate_rwr_subgraph(adj_list, neighbor_list, subgraph_size, features, subg
         cur_adj = cur_adj * subgraph_mask_adj
         cur_adj = cur_adj.to(torch.float)
         cur_adj = normalize_adj(cur_adj)
+
         ba.append(torch.unsqueeze(cur_adj, 0))
         bf.append(torch.unsqueeze(cur_feat, 0))
 
@@ -175,7 +172,9 @@ def generate_rwr_subgraph(adj_list, neighbor_list, subgraph_size, features, subg
 
 
 
+
 def calculate_auc_pr(y_scores, y_true):
+
     precision, recall, _ = precision_recall_curve(y_true, y_scores)
     pr_auc = auc(recall, precision)
     return [pr_auc]
